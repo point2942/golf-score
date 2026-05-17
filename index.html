@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf 即時計分系統</title>
+
+<style>
+body{
+  margin:0;
+  padding:0;
+  font-family:Arial,sans-serif;
+  background:#0f2d1a;
+  color:white;
+}
+
+.container{
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:white;
+  color:black;
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:20px;
+}
+
+h1,h2{
+  margin-top:0;
+}
+
+.score-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:10px;
+}
+
+.hole{
+  background:#f3f3f3;
+  border-radius:12px;
+  padding:10px;
+  text-align:center;
+}
+
+.hole input{
+  width:60px;
+  font-size:20px;
+  text-align:center;
+  margin-top:8px;
+}
+
+button{
+  border:none;
+  border-radius:12px;
+  padding:12px 18px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.btn-save{
+  background:#1f6f43;
+  color:white;
+}
+
+.rank-row{
+  display:flex;
+  justify-content:space-between;
+  padding:12px;
+  border-bottom:1px solid #ddd;
+}
+
+.total-box{
+  font-size:28px;
+  font-weight:bold;
+  margin-top:20px;
+}
+
+.name-input{
+  width:100%;
+  padding:12px;
+  font-size:18px;
+  margin-bottom:20px;
+  border-radius:12px;
+  border:1px solid #ccc;
+  box-sizing:border-box;
+}
+
+@media(max-width:768px){
+  .score-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+<h1>⛳ Golf 即時計分系統</h1>
+<p>🏌️ 免登入版本｜GitHub Pages 可直接使用</p>
+</div>
+
+<div class="card">
+
+<h2>🏌️ 輸入成績</h2>
+
+<input
+  type="text"
+  id="player-name"
+  class="name-input"
+  placeholder="請輸入球友姓名"
+>
+
+<div class="score-grid" id="score-grid"></div>
+
+<div class="total-box">
+總桿：<span id="total-score">72</span>
+</div>
+
+<br>
+
+<button class="btn-save" id="saveBtn">
+儲存成績
+</button>
+
+</div>
+
+<div class="card">
+<h2>🏆 即時排行榜</h2>
+<div id="ranking">尚無資料</div>
+</div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import {
+  getDatabase,
+  ref,
+  push,
+  set,
+  onValue
+}
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDLSW6Q04KPooiCj2yUpVLzdvdDQD59Q3Y",
+  authDomain: "golf-score-a6108.firebaseapp.com",
+  databaseURL: "https://golf-score-a6108-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "golf-score-a6108",
+  storageBucket: "golf-score-a6108.appspot.com",
+  messagingSenderId: "607069073537",
+  appId: "1:607069073537:web:24e3235c554645a392dd80"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const grid = document.getElementById("score-grid");
+
+for(let i=0;i<18;i++){
+
+  const hole = document.createElement("div");
+  hole.className = "hole";
+
+  hole.innerHTML = `
+    <div>第 ${i+1} 洞</div>
+    <input type="number" id="hole-${i}" value="4" min="1">
+  `;
+
+  grid.appendChild(hole);
+}
+
+function calcTotal(){
+
+  let total = 0;
+
+  for(let i=0;i<18;i++){
+
+    total += parseInt(
+      document.getElementById(`hole-${i}`).value
+    ) || 0;
+  }
+
+  document.getElementById("total-score").innerText = total;
+}
+
+calcTotal();
+
+document.addEventListener("input", calcTotal);
+
+// 儲存成績
+
+document.getElementById("saveBtn")
+.addEventListener("click", async()=>{
+
+  try{
+
+    const playerName = document
+    .getElementById("player-name")
+    .value
+    .trim();
+
+    if(!playerName){
+      alert("請輸入球友姓名");
+      return;
+    }
+
+    const scores = [];
+
+    for(let i=0;i<18;i++){
+
+      scores.push(
+        parseInt(
+          document.getElementById(`hole-${i}`).value
+        ) || 0
+      );
+    }
+
+    const total = scores.reduce((a,b)=>a+b,0);
+
+    const newRef = push(ref(db,"scores"));
+
+    await set(newRef,{
+      name: playerName,
+      scores: scores,
+      total: total,
+      updatedAt: Date.now()
+    });
+
+    alert("成績儲存成功！");
+
+  }catch(err){
+
+    console.error(err);
+    alert("儲存失敗：" + err.message);
+  }
+
+});
+
+// 即時排行榜
+
+onValue(ref(db,"scores"),(snap)=>{
+
+  const data = snap.val();
+
+  if(!data){
+
+    document.getElementById("ranking")
+    .innerHTML = "尚無資料";
+
+    return;
+  }
+
+  const players = Object.values(data)
+  .sort((a,b)=>a.total-b.total);
+
+  document.getElementById("ranking")
+  .innerHTML = players.map((p,i)=>`
+
+    <div class="rank-row">
+      <div>${i+1}. ${p.name}</div>
+      <div>${p.total}</div>
+    </div>
+
+  `).join("");
+
+});
+
+</script>
+
+</body>
+</html>
