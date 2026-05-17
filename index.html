@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf Test</title>
+
+<style>
+body{
+  font-family: Arial;
+  background:#0f2d1a;
+  color:white;
+  margin:0;
+  padding:20px;
+}
+
+.card{
+  background:white;
+  color:black;
+  padding:20px;
+  border-radius:20px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:10px;
+}
+
+input{
+  width:60px;
+  font-size:18px;
+}
+
+button{
+  padding:10px;
+  border:none;
+  background:green;
+  color:white;
+  border-radius:10px;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>測試：是否能輸入</h2>
+
+<div class="grid" id="grid"></div>
+
+<h3>總桿：<span id="total">0</span></h3>
+
+<button onclick="save()">儲存</button>
+
+</div>
+
+<script>
+console.log("JS 已啟動");
+
+const grid = document.getElementById("grid");
+
+for(let i=0;i<18;i++){
+  grid.innerHTML += `
+    <div>
+      ${i+1}
+      <input type="number" value="4" id="h${i}">
+    </div>
+  `;
+}
+
+function calc(){
+  let total = 0;
+  for(let i=0;i<18;i++){
+    total += Number(document.getElementById("h"+i).value);
+  }
+  document.getElementById("total").innerText = total;
+}
+
+document.addEventListener("input", calc);
+
+function save(){
+  let name = prompt("名字");
+
+  let scores = [];
+  for(let i=0;i<18;i++){
+    scores.push(document.getElementById("h"+i).value);
+  }
+
+  localStorage.setItem(name, JSON.stringify(scores));
+  alert("已儲存（測試版）");
+}
+
+calc();
+</script>
+
+</body>
+</html>
